@@ -17,7 +17,76 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddOpenApi();
 
+string connectionString;
+
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    // prod
+    connectionString = databaseUrl;
+}
+else
+{
+    var host = Environment.GetEnvironmentVariable("DB_HOST");
+    var database = Environment.GetEnvironmentVariable("DB_NAME");
+    var username = Environment.GetEnvironmentVariable("DB_USER");
+    var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+    connectionString = $"Host={host};Database={database};Username={username};Password={password}";
+
+}
+
+builder.Services.AddDbContext<CodeVaultContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// JWT config
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+var jwtExpirationDays = builder.Configuration.GetValue<int>("JwtSettings:ExpirationDays");
+
+if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException("JWT Secret must be at least 32 characters long");
+}
+
+var key = Encoding.ASCII.GetBytes(jwtSecret);
+
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(x =>
+{
+    x.RequireHttpsMetadata = false; // For development only
+    x.SaveToken = true;
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false
+    };
+});
+
+builder.Services.AddAuthorization();
+
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<CodeVaultContext>();
+    context.Database.EnsureCreated();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();
 
@@ -32,8 +101,8 @@ public class Snippet
 
     // Code Content
     public string Code { get; set; } = "";
-    public string Language { get; set; } = ""; // "csharp", "javascript", "python", etc.
-    public string Framework { get; set; } = ""; // "react", "dotnet", "django", etc. (optional)
+    public string Language { get; set; } = ""; // "csharp", "javascript", "python"
+    public string Framework { get; set; } = ""; // "react", "dotnet", "django"
 
     // Metadata
     public List<string> Tags { get; set; } = new(); // ["api", "authentication", "jwt"]
