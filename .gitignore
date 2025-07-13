@@ -1,0 +1,27 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+
+# Build results
+bin/
+obj/
+out/
+
+# Database
+*.db
+*.sqlite
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
