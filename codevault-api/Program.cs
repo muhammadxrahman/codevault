@@ -1,3 +1,27 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using FluentValidation;
+using DotNetEnv;
+
+
+Env.Load();
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+app.Run();
+
+
 // Snippet models
 public class Snippet
 {
@@ -92,4 +116,50 @@ public class LoginRequest
 {
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
+}
+
+
+// Db Context
+public class CodeVaultContext : DbContext
+{
+    public CodeVaultContext(DbContextOptions<CodeVaultContext> options) : base(options) { }
+    
+    public DbSet<User> Users { get; set; }
+    public DbSet<Snippet> Snippets { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // User configuration
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PasswordHash).IsRequired();
+            entity.HasIndex(e => e.Username).IsUnique();
+        });
+
+        // Snippet configuration
+        modelBuilder.Entity<Snippet>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Code).HasMaxLength(50000); // Optional, but with max length
+            entity.Property(e => e.Language).HasMaxLength(50); // Optional
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
+            
+            // Convert Tags list to JSON string for database storage
+            entity.Property(e => e.Tags)
+                .HasConversion(
+                    v => string.Join(',', v),
+                    v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                );
+                
+            // Configure relationship
+            entity.HasOne(e => e.User)
+                  .WithMany(e => e.Snippets)
+                  .HasForeignKey(e => e.UserId);
+        });
+    }
 }
