@@ -1,6 +1,38 @@
-@codevault_api_HostAddress = http://localhost:5251
+@codevault_api_HostAddress = http://localhost:5000
+@token = 
 
-GET {{codevault_api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Register a new user
+POST {{codevault_api_HostAddress}}/api/auth/register
+Content-Type: application/json
 
-###
+{
+  "username": "testuser",
+  "password": "mypassword123",
+  "displayName": "Test User"
+}
+
+### Login user
+POST {{codevault_api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "mypassword123"
+}
+
+### Get all snippets (requires auth)
+GET {{codevault_api_HostAddress}}/api/snippets
+Authorization: Bearer {{token}}
+
+### Create a snippet (requires auth)
+POST {{codevault_api_HostAddress}}/api/snippets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Hello World in C#",
+  "description": "Basic console application",
+  "code": "Console.WriteLine(\"Hello, World!\");",
+  "language": "csharp",
+  "tags": ["beginner", "console"]
+}

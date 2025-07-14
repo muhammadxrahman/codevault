@@ -135,7 +135,33 @@ int? GetUserIdFromClaims(ClaimsPrincipal user) // user is the shape of the token
 
 // ENDPOINTS:
 
-
+// POST /api/auth/register - Register a new user
+app.MapPost("/api/auth/register", async (CodeVaultContext context, RegisterRequest request) =>
+{
+    // Check if user already exists
+    if (await context.Users.AnyAsync(u => u.Username == request.Username))
+    {
+        return Results.BadRequest(new { error = "Username already exists" });
+    }
+    
+    // Create new user
+    var user = new User
+    {
+        Username = request.Username,
+        DisplayName = request.DisplayName,
+        PasswordHash = HashPassword(request.Password)
+    };
+    
+    context.Users.Add(user);
+    await context.SaveChangesAsync();
+    
+    // Generate JWT token
+    var token = GenerateJwt(user);
+    
+    return Results.Ok(new { Token = token, Username = user.Username, DisplayName = user.DisplayName });
+})
+.WithName("Register")
+.WithSummary("Register a new user");
 
 
 app.Run();
