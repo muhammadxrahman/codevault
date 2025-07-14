@@ -4,7 +4,6 @@ using System.Text;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using DotNetEnv;
@@ -16,6 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // SERVICES:
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();  // openapi spec info, no real visuals 
+builder.Services.AddSwaggerGen(); // swagger ui to view info
 
 // Db config
 string connectionString;
@@ -84,6 +85,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "CodeVault API v1");
+    });
+    
 }
 
 app.UseHttpsRedirection();
