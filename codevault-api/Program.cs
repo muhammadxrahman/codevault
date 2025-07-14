@@ -88,6 +88,52 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+
+// helpers
+
+string HashPassword(string password)
+{
+    using var sha256 = SHA256.Create(); // crypto hasher
+    var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password)); //  reg password > bytes > hashed with sha256 algo
+    return Convert.ToBase64String(hashedBytes); // converts hashed bytes to readable string
+}
+
+string GenerateJwt(User user)
+{
+    var tokenHandler = new JwtSecurityTokenHandler(); // token manager
+    // jwt settings
+    var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+    var jwtExpirationDays = builder.Configuration.GetValue<int>("JwtSettings:ExpirationDays");
+    var key = Encoding.ASCII.GetBytes(jwtSecret!); // variable! == not null here
+    // the content for the token
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(new[] {
+            new Claim("userId", user.Id.ToString()),
+            new Claim("username",user.Username)
+        }),
+        Expires = DateTime.UtcNow.AddDays(jwtExpirationDays),
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature) // sign with our secret key
+    };
+    // handler makes and sends the token
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    return tokenHandler.WriteToken(token);
+}
+
+int? GetUserIdFromClaims(ClaimsPrincipal user) // user is the shape of the token data
+{   // grab that userId and find which which
+    var userIdClaim = user.FindFirst("userId");
+    if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+    {
+        return null;
+    }
+    return userId;
+}
+
+
+
+
+
 app.Run();
 
 
