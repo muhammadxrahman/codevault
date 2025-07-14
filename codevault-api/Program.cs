@@ -14,11 +14,11 @@ Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
+// SERVICES:
 builder.Services.AddOpenApi();
 
+// Db config
 string connectionString;
-
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 if (!string.IsNullOrEmpty(databaseUrl))
 {
@@ -50,6 +50,7 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 
 var key = Encoding.ASCII.GetBytes(jwtSecret);
 
+// Auth config
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,6 +76,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    // dependency injection
     var context = scope.ServiceProvider.GetRequiredService<CodeVaultContext>();
     context.Database.EnsureCreated();
 }
@@ -89,7 +91,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 
-// helpers
+// HELPERS:
 
 string HashPassword(string password)
 {
@@ -130,6 +132,8 @@ int? GetUserIdFromClaims(ClaimsPrincipal user) // user is the shape of the token
     return userId;
 }
 
+
+// ENDPOINTS:
 
 
 
